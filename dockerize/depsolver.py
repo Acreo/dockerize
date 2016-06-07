@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 import logging
@@ -39,25 +39,39 @@ class ELFFile(dict):
         '''Use `objdump` to read list of sections from the ELF file.'''
         try:
             out = subprocess.check_output(['objdump', '-h', self.path],
-                                          stderr=subprocess.STDOUT)
+                                              stderr=subprocess.STDOUT)
+            out = out.decode('utf8')
+            
         except subprocess.CalledProcessError:
             raise ValueError(self.path)
-
+        
+        print("out: ", out)
         for line in out.splitlines():
             line = line.strip()
+            print("Line: ", line)
             if not line or not line[0].isdigit():
                 continue
-
+            
+            print("read_sections found ", line.split())
             contents = ELFContents(*line.split())
             self[contents.name] = contents
+
+        print("Contents: ", self)
+
 
     def section(self, name):
         '''Return the raw content of the named section from the ELF file.'''
         section = self[name]
-        with open(self.path) as fde:
+        print("section: ", section)
+        print("section offset: ",section.offset)
+        print("section size: ", section.size)
+        with open(self.path,mode='rb') as fde:
+            print("Seeking in file, ", int(section.offset, base=16) )
             fde.seek(int(section.offset, base=16))
+            print("reading data , ", int(section.size, base=16))
             data = fde.read(int(section.size, base=16))
-            return data
+            print("returning data: ", data)
+            return data.decode()
 
     def interpreter(self):
         '''Return the value of the `.interp` section of the ELF file.'''
@@ -79,8 +93,10 @@ class DepSolver(object):
         # to produce the list of library dependencies.
         try:
             elf = ELFFile(path)
+            print("get_deps: got elf: ", elf)
             interp = elf.interpreter()
-        except ValueError:
+        except ValueError as e:
+            print("ValueError ", e)
             LOG.debug('%s is not a dynamically linked ELF binary (ignoring)',
                       path)
             return
@@ -91,7 +107,7 @@ class DepSolver(object):
 
         self.deps.add(interp)
         out = subprocess.check_output([interp, '--list', path])
-
+        out = out.decode('utf8')
         for line in out.splitlines():
             for exp in RE_DEPS:
                 match = exp.match(line)

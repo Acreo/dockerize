@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
 from __future__ import absolute_import
@@ -193,13 +193,16 @@ class Dockerize(object):
 
         deps = DepSolver()
 
+
         # Iterate over all files in the image.
         for root, _, files in os.walk(self.targetdir):
             for name in files:
                 path = os.path.join(root, name)
                 deps.add(path)
 
+        print("Installing deps found by DepSolver,", deps)
         for src in deps.deps:
+            print("resolve_deps, installing ", src)            
             self.copy_file(src, symlinks=SymlinkOptions.COPY_ALL)
 
         # Install some basic nss libraries to permit programs to resolve
